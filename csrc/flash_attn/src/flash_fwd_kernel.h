@@ -166,6 +166,16 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
     Tensor sVt = make_tensor(sV.data(), typename Kernel_traits::SmemLayoutVtransposed{});
     Tensor sVtNoSwizzle = make_tensor(sV.data().get(), typename Kernel_traits::SmemLayoutVtransposedNoSwizzle{});
 
+    // Load alibi slope vector for the current batch
+    Tensor alibi_slope_vec = make_tensor(make_gmem_ptr(reinterpret_cast<float *>(params.alibi_slopes_ptr) +
+                            bidb * params.alibi_slopes_batch_stride),
+                            make_shape(binfo.actual_seqlen_k), make_stride(_1{}));
+
+    // Slice the relevant block for the current thread
+    Tensor alibi_slope_block = local_tile(alibi_slope_vec, Shape<Int<kBlockN>>{},
+                                        make_coord(n_block * kBlockN));  // (kBlockN)
+
+
     typename Kernel_traits::GmemTiledCopyQKV gmem_tiled_copy_QKV;
     auto gmem_thr_copy_QKV = gmem_tiled_copy_QKV.get_thread_slice(tidx);
 
@@ -284,8 +294,8 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
 
     FLASH_NAMESPACE::Softmax<2 * size<1>(acc_o)> softmax;
 
-    const float alibi_slope = !Has_alibi || params.alibi_slopes_ptr == nullptr ? 0.0f : reinterpret_cast<float *>(params.alibi_slopes_ptr)[bidb * params.alibi_slopes_batch_stride + bidh] / params.scale_softmax;
-    FLASH_NAMESPACE::Mask<Is_causal, Is_local, Has_alibi> mask(binfo.actual_seqlen_k, binfo.actual_seqlen_q, params.window_size_left, params.window_size_right, alibi_slope);
+    // const float alibi_slope = !Has_alibi || params.alibi_slopes_ptr == nullptr ? 0.0f : reinterpret_cast<float *>(params.alibi_slopes_ptr)[bidb * params.alibi_slopes_batch_stride + bidh] / params.scale_softmax;
+    FLASH_NAMESPACE::Mask<Is_causal, Is_local, Has_alibi> mask(binfo.actual_seqlen_k, binfo.actual_seqlen_q, params.window_size_left, params.window_size_right, 0.0f);
 
     // For performance reason, we separate out two kinds of iterations:
     // those that need masking on S, and those that don't.
@@ -328,6 +338,17 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
         );
+
+        #pragma unroll
+        for (int col = 0; col < size<1>(acc_s); ++col) {
+            float alibi_value = alibi_slope_block(col);
+            if (alibi_value == 0.0f) {
+                #pragma unroll
+                for (int row = 0; row < size<0>(acc_s); ++row) {
+                    acc_s(row, col) = -INFINITY;
+                }
+            }
+        }
 
         FLASH_NAMESPACE::cp_async_wait<0>();
         __syncthreads();
