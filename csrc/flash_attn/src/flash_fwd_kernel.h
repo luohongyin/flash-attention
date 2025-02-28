@@ -166,14 +166,17 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
     Tensor sVt = make_tensor(sV.data(), typename Kernel_traits::SmemLayoutVtransposed{});
     Tensor sVtNoSwizzle = make_tensor(sV.data().get(), typename Kernel_traits::SmemLayoutVtransposedNoSwizzle{});
 
-    // Load alibi slope vector for the current batch
-    Tensor alibi_slope_vec = make_tensor(make_gmem_ptr(reinterpret_cast<float *>(params.alibi_slopes_ptr) +
-                            bidb * params.alibi_slopes_batch_stride),
-                            make_shape(binfo.actual_seqlen_k), make_stride(_1{}));
+    // 1) Load alibi slope vector for the current batch
+    Tensor alibi_slope_vec = make_tensor(
+        make_gmem_ptr(reinterpret_cast<float *>(params.alibi_slopes_ptr) +
+                    bidb * params.alibi_slopes_batch_stride),
+        make_shape(binfo.actual_seqlen_k), 
+        make_stride(_1{})
+    );
 
-    // Slice the relevant block for the current thread
-    Tensor alibi_slope_block = local_tile(alibi_slope_vec, Shape<Int<kBlockN>>{},
-                                        make_coord(n_block * kBlockN));  // (kBlockN)
+    // // Slice the relevant block for the current thread
+    // Tensor alibi_slope_block = local_tile(alibi_slope_vec, Shape<Int<kBlockN>>{},
+    //                                     make_coord(m_block * kBlockN));  // (kBlockN)
 
 
     typename Kernel_traits::GmemTiledCopyQKV gmem_tiled_copy_QKV;
@@ -310,6 +313,23 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         : ((Is_even_MN && Is_causal) ? cute::ceil_div(kBlockM, kBlockN) : cute::ceil_div(kBlockM, kBlockN) + 1);
     #pragma unroll
     for (int masking_step = 0; masking_step < n_masking_steps; ++masking_step, --n_block) {
+        
+        // 2) Slice the relevant block for the current thread
+        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+                                            Shape<Int<kBlockN>>{},
+                                            make_coord(n_block * kBlockN));
+        
+        #pragma unroll
+        for (int col = 0; col < size<1>(acc_s); ++col) {
+            float alibi_value = alibi_slope_block(col);
+            if (alibi_value == 0.0f) {
+                #pragma unroll
+                for (int row = 0; row < size<0>(acc_s); ++row) {
+                    acc_s(row, col) = -INFINITY;
+                }
+            }
+        }
+
         Tensor acc_s = partition_fragment_C(tiled_mma, Shape<Int<kBlockM>, Int<kBlockN>>{});  // (MMA=4, MMA_M, MMA_N)
         clear(acc_s);
         FLASH_NAMESPACE::cp_async_wait<0>();
@@ -338,17 +358,6 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
         );
-
-        #pragma unroll
-        for (int col = 0; col < size<1>(acc_s); ++col) {
-            float alibi_value = alibi_slope_block(col);
-            if (alibi_value == 0.0f) {
-                #pragma unroll
-                for (int row = 0; row < size<0>(acc_s); ++row) {
-                    acc_s(row, col) = -INFINITY;
-                }
-            }
-        }
 
         FLASH_NAMESPACE::cp_async_wait<0>();
         __syncthreads();
@@ -397,6 +406,23 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
 
     // These are the iterations where we don't need masking on S
     for (; n_block >= n_block_min; --n_block) {
+        
+        // 2) Slice the relevant block for the current thread
+        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+                                            Shape<Int<kBlockN>>{},
+                                            make_coord(n_block * kBlockN));
+        
+        #pragma unroll
+        for (int col = 0; col < size<1>(acc_s); ++col) {
+            float alibi_value = alibi_slope_block(col);
+            if (alibi_value == 0.0f) {
+                #pragma unroll
+                for (int row = 0; row < size<0>(acc_s); ++row) {
+                    acc_s(row, col) = -INFINITY;
+                }
+            }
+        }
+
         Tensor acc_s = partition_fragment_C(tiled_mma, Shape<Int<kBlockM>, Int<kBlockN>>{});  // (MMA=4, MMA_M, MMA_N)
         clear(acc_s);
         FLASH_NAMESPACE::cp_async_wait<0>();
