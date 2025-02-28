@@ -130,7 +130,8 @@ struct Mask {
     __forceinline__ __device__ void apply_mask(Tensor<Engine, Layout> &tensor_,
                                                const int col_idx_offset_,
                                                const int row_idx_offset,
-                                               const int warp_row_stride) {
+                                               const int warp_row_stride,
+                                               Tensor<Engine, Layout> &attn_mask) {
         static_assert(!(Causal_mask && Is_local), "Cannot be both causal and local");
         static_assert(Layout::rank == 3, "Only support 3D Tensor");
         static_assert(decltype(size<0>(tensor_))::value == 4, "First dimension must be 4");
@@ -150,6 +151,9 @@ struct Mask {
                     #pragma unroll
                     for (int j = 0; j < size<1, 0>(tensor); ++j) {
                         const int col_idx = col_idx_base + j;
+
+                        auto mask_val = attn_mask.data()[col_idx];
+                        
                         #pragma unroll
                         for (int mi = 0; mi < size<0>(tensor); ++mi) {
                             // No causal, no local
@@ -158,6 +162,10 @@ struct Mask {
                             }
                             if constexpr (!Is_even_MN) {
                                 if (col_idx >= max_seqlen_k) { tensor(mi, make_coord(j, nj)) = -INFINITY; }
+                            }
+
+                            if (mask_val == 0.0) {
+                                tensor(mi, make_coord(j, nj)) = -INFINITY;
                             }
                         }
                     }
