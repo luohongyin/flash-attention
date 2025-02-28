@@ -313,22 +313,6 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         : ((Is_even_MN && Is_causal) ? cute::ceil_div(kBlockM, kBlockN) : cute::ceil_div(kBlockM, kBlockN) + 1);
     #pragma unroll
     for (int masking_step = 0; masking_step < n_masking_steps; ++masking_step, --n_block) {
-        
-        // 2) Slice the relevant block for the current thread
-        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
-                                            Shape<Int<kBlockN>>{},
-                                            make_coord(n_block * kBlockN));
-        
-        #pragma unroll
-        for (int col = 0; col < size<1>(acc_s); ++col) {
-            float alibi_value = alibi_slope_block(col);
-            if (alibi_value == 0.0f) {
-                #pragma unroll
-                for (int row = 0; row < size<0>(acc_s); ++row) {
-                    acc_s(row, col) = -INFINITY;
-                }
-            }
-        }
 
         Tensor acc_s = partition_fragment_C(tiled_mma, Shape<Int<kBlockM>, Int<kBlockN>>{});  // (MMA=4, MMA_M, MMA_N)
         clear(acc_s);
@@ -358,6 +342,22 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
         );
+
+        // 2) Slice the relevant block for the current thread
+        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+            Shape<Int<kBlockN>>{},
+            make_coord(n_block * kBlockN));
+
+        #pragma unroll
+        for (int col = 0; col < size<1>(acc_s); ++col) {
+            float alibi_value = alibi_slope_block(col);
+            if (alibi_value == 0.0f) {
+                #pragma unroll
+                for (int row = 0; row < size<0>(acc_s); ++row) {
+                    acc_s(row, col) = -INFINITY;
+                }
+            }
+        }
 
         FLASH_NAMESPACE::cp_async_wait<0>();
         __syncthreads();
@@ -406,22 +406,6 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
 
     // These are the iterations where we don't need masking on S
     for (; n_block >= n_block_min; --n_block) {
-        
-        // 2) Slice the relevant block for the current thread
-        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
-                                            Shape<Int<kBlockN>>{},
-                                            make_coord(n_block * kBlockN));
-        
-        #pragma unroll
-        for (int col = 0; col < size<1>(acc_s); ++col) {
-            float alibi_value = alibi_slope_block(col);
-            if (alibi_value == 0.0f) {
-                #pragma unroll
-                for (int row = 0; row < size<0>(acc_s); ++row) {
-                    acc_s(row, col) = -INFINITY;
-                }
-            }
-        }
 
         Tensor acc_s = partition_fragment_C(tiled_mma, Shape<Int<kBlockM>, Int<kBlockN>>{});  // (MMA=4, MMA_M, MMA_N)
         clear(acc_s);
@@ -450,6 +434,22 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         mask.template apply_mask</*Causal_mask=*/false>(
             acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
         );
+
+        // 2) Slice the relevant block for the current thread
+        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+            Shape<Int<kBlockN>>{},
+            make_coord(n_block * kBlockN));
+
+        #pragma unroll
+        for (int col = 0; col < size<1>(acc_s); ++col) {
+            float alibi_value = alibi_slope_block(col);
+            if (alibi_value == 0.0f) {
+                    #pragma unroll
+                    for (int row = 0; row < size<0>(acc_s); ++row) {
+                        acc_s(row, col) = -INFINITY;
+                }
+            }
+        }
 
         softmax.template softmax_rescale_o</*Is_first=*/false, /*Check_inf=*/Is_local>(acc_s, acc_o, params.scale_softmax_log2);
 
