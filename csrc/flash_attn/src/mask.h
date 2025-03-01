@@ -131,7 +131,7 @@ struct Mask {
                                                const int col_idx_offset_,
                                                const int row_idx_offset,
                                                const int warp_row_stride,
-                                               Tensor<Engine, Layout> &attn_mask) {
+                                               Tensor &attn_mask) {
         static_assert(!(Causal_mask && Is_local), "Cannot be both causal and local");
         static_assert(Layout::rank == 3, "Only support 3D Tensor");
         static_assert(decltype(size<0>(tensor_))::value == 4, "First dimension must be 4");
