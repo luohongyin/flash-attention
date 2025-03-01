@@ -107,6 +107,13 @@ inline __device__ void sparse_attn_1rowblock(const Params &params, const int bid
     Tensor sVt = make_tensor(sV.data(), typename Kernel_traits::SmemLayoutVtransposed{});
     Tensor sVtNoSwizzle = make_tensor(sV.data().get(), typename Kernel_traits::SmemLayoutVtransposedNoSwizzle{});
 
+    Tensor alibi_slope_vec = make_tensor(
+        make_gmem_ptr(reinterpret_cast<float *>(params.alibi_slopes_ptr) +
+                    bidb * params.alibi_slopes_batch_stride),
+        make_shape(binfo.actual_seqlen_k), 
+        make_stride(_1{})
+    );
+    
     typename Kernel_traits::GmemTiledCopyQKV gmem_tiled_copy_QKV;
     auto gmem_thr_copy_QKV = gmem_tiled_copy_QKV.get_thread_slice(tidx);
 
@@ -325,8 +332,21 @@ inline __device__ void sparse_attn_1rowblock(const Params &params, const int bid
                 flash::apply_softcap(acc_s, params.softcap);
             }
 
+            // mask.template apply_mask<Is_causal, Is_even_MN>(
+            //     acc_s, start_n, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
+            // );
+
+            // 2) Slice the relevant block for the current thread
+            Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+                Shape<Int<kBlockN>>{},
+                make_coord(n_block * kBlockN));
+
             mask.template apply_mask<Is_causal, Is_even_MN>(
-                acc_s, start_n, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
+                acc_s,
+                n_block * kBlockN,
+                m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
+                kNWarps * 16,
+                alibi_slope_block
             );
 
             flash::cp_async_wait<0>();
