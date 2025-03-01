@@ -440,7 +440,7 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
             Shape<Int<kBlockN>>{},
             make_coord(n_block * kBlockN));
 
-        mask.template apply_mask</*Causal_mask=*/false>(
+        mask.template apply_mask</*Causal_mask=*/false, /*Is_even_MN=*/true>(
             acc_s,
             n_block * kBlockN,
             m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
