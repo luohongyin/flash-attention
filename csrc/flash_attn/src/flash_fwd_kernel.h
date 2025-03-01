@@ -666,6 +666,14 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
     Tensor sVt = make_tensor(sV.data(), typename Kernel_traits::SmemLayoutVtransposed{});
     Tensor sVtNoSwizzle = make_tensor(sV.data().get(), typename Kernel_traits::SmemLayoutVtransposedNoSwizzle{});
 
+    // 1) Load alibi slope vector for the current batch
+    Tensor alibi_slope_vec = make_tensor(
+        make_gmem_ptr(reinterpret_cast<float *>(params.alibi_slopes_ptr) +
+                    bidb * params.alibi_slopes_batch_stride),
+        make_shape(binfo.actual_seqlen_k), 
+        make_stride(_1{})
+    );
+
     typename Kernel_traits::GmemTiledCopyQKV gmem_tiled_copy_Q;
     auto gmem_thr_copy_Q = gmem_tiled_copy_Q.get_thread_slice(tidx);
     typename Kernel_traits::GmemTiledCopyQKVPaged gmem_tiled_copy_KV;
@@ -963,10 +971,22 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             FLASH_NAMESPACE::apply_softcap(acc_s, params.softcap);
         }
 
+        // 2) Slice the relevant block for the current thread
+        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+            Shape<Int<kBlockN>>{},
+            make_coord(n_block * kBlockN));
 
         mask.template apply_mask<Is_causal, Is_even_MN>(
-            acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
+            acc_s,
+            n_block * kBlockN,
+            m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
+            kNWarps * 16,
+            alibi_slope_block
         );
+
+        // mask.template apply_mask<Is_causal, Is_even_MN>(
+        //     acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
+        // );
 
         FLASH_NAMESPACE::cp_async_wait<0>();
         __syncthreads();
@@ -1049,9 +1069,22 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             cute::cp_async_fence();
         }
 
-        mask.template apply_mask</*Causal_mask=*/false>(
-            acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
+        // 2) Slice the relevant block for the current thread
+        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+            Shape<Int<kBlockN>>{},
+            make_coord(n_block * kBlockN));
+
+        mask.template apply_mask<Is_causal, Is_even_MN>(
+            acc_s,
+            n_block * kBlockN,
+            m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
+            kNWarps * 16,
+            alibi_slope_block
         );
+
+        // mask.template apply_mask</*Causal_mask=*/false>(
+        //     acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
+        // );
         softmax.template softmax_rescale_o</*Is_first=*/false, /*Check_inf=*/Is_local>(acc_s, acc_o, params.scale_softmax_log2);
 
         Tensor rP = FLASH_NAMESPACE::convert_type<Element>(acc_s);
