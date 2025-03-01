@@ -126,12 +126,12 @@ struct Mask {
     };
 
     // Causal_mask: whether this particular iteration needs causal masking
-    template <bool Causal_mask=false, bool Is_even_MN=true, typename Engine, typename Layout>
+    template <bool Causal_mask=false, bool Is_even_MN=true, typename Engine, typename Layout, typename EngineAM, typename LayoutAM>
     __forceinline__ __device__ void apply_mask(Tensor<Engine, Layout> &tensor_,
                                                const int col_idx_offset_,
                                                const int row_idx_offset,
                                                const int warp_row_stride,
-                                               Tensor &attn_mask) {
+                                               Tensor<EngineAM, LayoutAM> &attn_mask) {
         static_assert(!(Causal_mask && Is_local), "Cannot be both causal and local");
         static_assert(Layout::rank == 3, "Only support 3D Tensor");
         static_assert(decltype(size<0>(tensor_))::value == 4, "First dimension must be 4");
