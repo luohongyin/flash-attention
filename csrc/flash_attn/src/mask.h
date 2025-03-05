@@ -185,6 +185,9 @@ struct Mask {
                             #pragma unroll
                             for (int j = 0; j < size<1, 0>(tensor); ++j) {
                                 const int col_idx = col_idx_base + j;
+                                
+                                auto mask_val = attn_mask.data()[col_idx];
+
                                 if constexpr (Has_alibi) {
                                     if constexpr (Is_causal) {
                                         tensor(make_coord(i, mi), make_coord(j, nj)) += alibi_slope * col_idx;
@@ -208,6 +211,9 @@ struct Mask {
                                     if (col_idx >= max_seqlen_k) {
                                         tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                     }
+                                }
+                                if (mask_val == 0.0) {
+                                    tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                 }
                             }
                         }
