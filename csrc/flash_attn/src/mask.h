@@ -108,9 +108,6 @@ __forceinline__ __device__ void apply_mask_causal_w_idx(
     }
 }
 
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
-
 template <bool Is_causal, bool Is_local, bool Has_alibi>
 struct Mask {
 
@@ -156,7 +153,10 @@ struct Mask {
                         const int col_idx = col_idx_base + j;
 
                         auto mask_val = attn_mask.data()[col_idx];
-                        static_assert(mask_val == 0 || mask_val == 1, "mask must be 0 or 1, but its " STR(mask_val));
+                        if (!(mask_val == 0 || mask_val == 1)) {
+                            fprintf(stderr, "mask must be 0 or 1, but it's %d\n", mask_val);
+                            abort();
+                        }
                         
                         #pragma unroll
                         for (int mi = 0; mi < size<0>(tensor); ++mi) {
@@ -191,7 +191,10 @@ struct Mask {
                                 const int col_idx = col_idx_base + j;
                                 
                                 auto mask_val = attn_mask.data()[col_idx];
-                                static_assert(mask_val == 0 || mask_val == 1, "mask must be 0 or 1, but its " STR(mask_val));
+                                if (!(mask_val == 0 || mask_val == 1)) {
+                                    fprintf(stderr, "mask must be 0 or 1, but it's %d\n", mask_val);
+                                    abort();
+                                }
 
                                 if constexpr (Has_alibi) {
                                     if constexpr (Is_causal) {
