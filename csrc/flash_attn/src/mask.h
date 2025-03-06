@@ -160,6 +160,7 @@ struct Mask {
                         auto mask_val = attn_mask.data()[col_idx];
                         assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
                         assert(mask_val != 0 && mask_val != 1);
+                        assert(mask_val == 1);
                         
                         // TORCH_CHECK(mask_val == 0 || mask_val == 1);
                         
@@ -198,6 +199,7 @@ struct Mask {
                                 const int mask_val = attn_mask.data()[col_idx];
                                 assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
                                 assert(mask_val != 0 && mask_val != 1);
+                                assert(mask_val == 1);
                                 // TORCH_CHECK(mask_val == 0 || mask_val == 1);
 
                                 if constexpr (Has_alibi) {
