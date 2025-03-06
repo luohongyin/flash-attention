@@ -158,9 +158,9 @@ struct Mask {
                         const int col_idx = col_idx_base + j;
 
                         auto mask_val = attn_mask.data()[col_idx];
-                        assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
-                        assert(mask_val != 0 && mask_val != 1);
-                        assert(mask_val == 1);
+                        // assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
+                        // assert(mask_val != 0 && mask_val != 1);
+                        // assert(mask_val == 1);
                         
                         // TORCH_CHECK(mask_val == 0 || mask_val == 1);
                         
@@ -174,9 +174,10 @@ struct Mask {
                                 if (col_idx >= max_seqlen_k) { tensor(mi, make_coord(j, nj)) = -INFINITY; }
                             }
 
-                            if (mask_val != 1) {
-                                tensor(mi, make_coord(j, nj)) = -INFINITY;
-                            }
+                            // if (mask_val != 1) {
+                            //     tensor(mi, make_coord(j, nj)) = -INFINITY;
+                            // }
+                            tensor(mi, make_coord(j, nj)) += mask_val;
                         }
                     }
                 }
@@ -197,9 +198,9 @@ struct Mask {
                                 const int col_idx = col_idx_base + j;
                                 
                                 const int mask_val = attn_mask.data()[col_idx];
-                                assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
-                                assert(mask_val != 0 && mask_val != 1);
-                                assert(mask_val == 1);
+                                // assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
+                                // assert(mask_val != 0 && mask_val != 1);
+                                // assert(mask_val == 1);
                                 // TORCH_CHECK(mask_val == 0 || mask_val == 1);
 
                                 if constexpr (Has_alibi) {
@@ -226,9 +227,10 @@ struct Mask {
                                         tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                     }
                                 }
-                                if (mask_val != 1) {
-                                    tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
-                                }
+                                // if (mask_val != 1) {
+                                //     tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
+                                // }
+                                tensor(mi, make_coord(j, nj)) += mask_val;
                             }
                         }
                     }
