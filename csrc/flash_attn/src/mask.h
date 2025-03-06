@@ -138,7 +138,7 @@ struct Mask {
                                                Tensor<EngineAM, LayoutAM> &attn_mask) {
         static_assert(!(Causal_mask && Is_local), "Cannot be both causal and local");
         static_assert(Layout::rank == 3, "Only support 3D Tensor");
-        static_assert(LayoutAM::rank == 1, "Only support 1D Tensor");
+        static_assert(LayoutAM::rank == 2, "Only support 2D Tensor");
         static_assert(decltype(size<0>(tensor_))::value == 4, "First dimension must be 4");
         static constexpr bool Need_masking = Has_alibi || Causal_mask || Is_local || !Is_even_MN;
         // if (cute::thread0()) { printf("Has_alibi = %d, Causal_mask=%d, Is_local=%d, Is_even_MN = %d, Need_masking = %d\n", Has_alibi, Causal_mask, Is_local, Is_even_MN, Need_masking); }
