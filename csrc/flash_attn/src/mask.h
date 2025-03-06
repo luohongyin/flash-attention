@@ -155,8 +155,9 @@ struct Mask {
                     for (int j = 0; j < size<1, 0>(tensor); ++j) {
                         const int col_idx = col_idx_base + j;
 
-                        const int mask_val = attn_mask.data()[col_idx];
-                        static_assert(mask_val == 0 || mask_val == 1, "mask must be 0 or 1, but its " STR(mask_val));
+                        auto mask_val = attn_mask.data()[col_idx];
+                        
+                        TORCH_CHECK(mask_val == 0 || mask_val == 1);
                         
                         #pragma unroll
                         for (int mi = 0; mi < size<0>(tensor); ++mi) {
@@ -191,7 +192,7 @@ struct Mask {
                                 const int col_idx = col_idx_base + j;
                                 
                                 const int mask_val = attn_mask.data()[col_idx];
-                                static_assert(mask_val == 0 || mask_val == 1, "mask must be 0 or 1, but its " STR(mask_val));
+                                TORCH_CHECK(mask_val == 0 || mask_val == 1);
 
                                 if constexpr (Has_alibi) {
                                     if constexpr (Is_causal) {
