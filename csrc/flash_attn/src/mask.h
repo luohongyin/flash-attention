@@ -5,7 +5,7 @@
 #pragma once
 #include "namespace_config.h"
 
-#include <c10/cuda/CUDAGuard.h>
+#include <assert.h>
 #include <cute/tensor.hpp>
 
 namespace FLASH_NAMESPACE {
