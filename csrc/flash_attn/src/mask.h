@@ -158,11 +158,6 @@ struct Mask {
                         const int col_idx = col_idx_base + j;
 
                         auto mask_val = attn_mask.data()[col_idx];
-                        // assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
-                        // assert(mask_val != 0 && mask_val != 1);
-                        // assert(mask_val == 1);
-                        
-                        // TORCH_CHECK(mask_val == 0 || mask_val == 1);
                         
                         #pragma unroll
                         for (int mi = 0; mi < size<0>(tensor); ++mi) {
@@ -177,7 +172,6 @@ struct Mask {
                             if (mask_val == 0) {
                                 tensor(mi, make_coord(j, nj)) = -INFINITY;
                             }
-                            // tensor(mi, make_coord(j, nj)) += mask_val;
                         }
                     }
                 }
@@ -198,10 +192,6 @@ struct Mask {
                                 const int col_idx = col_idx_base + j;
                                 
                                 const int mask_val = attn_mask.data()[col_idx];
-                                // assert(attn_mask[col_idx] == 0 || attn_mask[col_idx] == 1);
-                                // assert(mask_val != 0 && mask_val != 1);
-                                // assert(mask_val == 1);
-                                // TORCH_CHECK(mask_val == 0 || mask_val == 1);
 
                                 if constexpr (Has_alibi) {
                                     if constexpr (Is_causal) {
@@ -227,7 +217,8 @@ struct Mask {
                                         tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                     }
                                 }
-                                if (mask_val == 0) {
+
+                                if (mask_val == 0) { // int or float?
                                     tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                 }
                                 // tensor(mi, make_coord(j, nj)) += mask_val;
