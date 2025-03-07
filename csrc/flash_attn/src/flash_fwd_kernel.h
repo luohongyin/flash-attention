@@ -668,7 +668,7 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
 
     // 1) Load alibi slope vector for the current batch
     Tensor alibi_slope_vec = make_tensor(
-        make_gmem_ptr(reinterpret_cast<float *>(params.alibi_slopes_ptr) +
+        make_gmem_ptr(reinterpret_cast<int *>(params.alibi_slopes_ptr) +
                     bidb * params.alibi_slopes_batch_stride),
         make_shape(binfo.actual_seqlen_k), 
         make_stride(_1{})
