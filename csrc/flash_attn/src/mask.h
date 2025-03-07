@@ -174,10 +174,10 @@ struct Mask {
                                 if (col_idx >= max_seqlen_k) { tensor(mi, make_coord(j, nj)) = -INFINITY; }
                             }
 
-                            // if (mask_val != 1) {
-                            //     tensor(mi, make_coord(j, nj)) = -INFINITY;
-                            // }
-                            tensor(mi, make_coord(j, nj)) += mask_val;
+                            if (mask_val == 0) {
+                                tensor(mi, make_coord(j, nj)) = -INFINITY;
+                            }
+                            // tensor(mi, make_coord(j, nj)) += mask_val;
                         }
                     }
                 }
@@ -227,10 +227,10 @@ struct Mask {
                                         tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                     }
                                 }
-                                // if (mask_val != 1) {
-                                //     tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
-                                // }
-                                tensor(mi, make_coord(j, nj)) += mask_val;
+                                if (mask_val == 0) {
+                                    tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
+                                }
+                                // tensor(mi, make_coord(j, nj)) += mask_val;
                             }
                         }
                     }
