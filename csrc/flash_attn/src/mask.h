@@ -218,7 +218,7 @@ struct Mask {
                                     }
                                 }
 
-                                if attn_mask(make_coord(col_idx)) == 0) { // int or float?
+                                if (attn_mask(make_coord(col_idx)) == 0) { // int or float?
                                     tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                 }
                                 // tensor(mi, make_coord(j, nj)) += mask_val;
