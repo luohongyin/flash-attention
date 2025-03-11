@@ -157,7 +157,7 @@ struct Mask {
                     for (int j = 0; j < size<1, 0>(tensor); ++j) {
                         const int col_idx = col_idx_base + j;
 
-                        auto mask_val = attn_mask.data()[col_idx];
+                        // auto mask_val = attn_mask.data()[col_idx];
                         
                         #pragma unroll
                         for (int mi = 0; mi < size<0>(tensor); ++mi) {
@@ -169,7 +169,7 @@ struct Mask {
                                 if (col_idx >= max_seqlen_k) { tensor(mi, make_coord(j, nj)) = -INFINITY; }
                             }
 
-                            if (mask_val != 1) {
+                            if (attn_mask(make_coord(col_idx)) == 0) {
                                 tensor(mi, make_coord(j, nj)) = -INFINITY;
                             }
                         }
@@ -191,7 +191,7 @@ struct Mask {
                             for (int j = 0; j < size<1, 0>(tensor); ++j) {
                                 const int col_idx = col_idx_base + j;
                                 
-                                const int mask_val = attn_mask.data()[col_idx];
+                                // const int mask_val = attn_mask.data()[col_idx];
 
                                 if constexpr (Has_alibi) {
                                     if constexpr (Is_causal) {
@@ -218,7 +218,7 @@ struct Mask {
                                     }
                                 }
 
-                                if (mask_val != 1) { // int or float?
+                                if attn_mask(make_coord(col_idx)) == 0) { // int or float?
                                     tensor(make_coord(i, mi), make_coord(j, nj)) = -INFINITY;
                                 }
                                 // tensor(mi, make_coord(j, nj)) += mask_val;
