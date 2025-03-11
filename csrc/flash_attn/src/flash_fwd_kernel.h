@@ -342,7 +342,7 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         // 2) Slice the relevant block for the current thread
         Tensor alibi_slope_block = local_tile(alibi_slope_vec,
             Shape<Int<kBlockN>>{},
-            make_coord(n_block * kBlockN));
+            make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s,
@@ -438,7 +438,7 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         // 2) Slice the relevant block for the current thread
         Tensor alibi_slope_block = local_tile(alibi_slope_vec,
             Shape<Int<kBlockN>>{},
-            make_coord(n_block * kBlockN));
+            make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask</*Causal_mask=*/false, /*Is_even_MN=*/true>(
             acc_s,
@@ -974,7 +974,7 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         // 2) Slice the relevant block for the current thread
         Tensor alibi_slope_block = local_tile(alibi_slope_vec,
             Shape<Int<kBlockN>>{},
-            make_coord(n_block * kBlockN));
+            make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s,
@@ -1072,7 +1072,7 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         // 2) Slice the relevant block for the current thread
         Tensor alibi_slope_block = local_tile(alibi_slope_vec,
             Shape<Int<kBlockN>>{},
-            make_coord(n_block * kBlockN));
+            make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s,
