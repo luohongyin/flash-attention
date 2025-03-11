@@ -352,6 +352,8 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
             alibi_slope_block
         );
 
+        if (cute::thread(0, 0)) { print("loop 1 1row"); printf(bidb); print_tensor(alibi_slope_block); }
+
         // #pragma unroll
         // for (int col = 0; col < size<1>(acc_s); ++col) {
         //     float alibi_value = alibi_slope_block(col);
@@ -970,6 +972,8 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         if constexpr (Is_softcap){
             FLASH_NAMESPACE::apply_softcap(acc_s, params.softcap);
         }
+
+        if (cute::thread(0, 0)) { print("split_kv"); printf(bidb); print_tensor(alibi_slope_block); }
 
         // 2) Slice the relevant block for the current thread
         Tensor alibi_slope_block = local_tile(alibi_slope_vec,
