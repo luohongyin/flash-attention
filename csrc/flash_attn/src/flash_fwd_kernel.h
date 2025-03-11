@@ -973,8 +973,6 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             FLASH_NAMESPACE::apply_softcap(acc_s, params.softcap);
         }
 
-        if (cute::thread(0, 0)) { print("split_kv"); print(bidb); print_tensor(alibi_slope_block); }
-
         // 2) Slice the relevant block for the current thread
         Tensor alibi_slope_block = local_tile(alibi_slope_vec,
             Shape<Int<kBlockN>>{},
@@ -987,6 +985,8 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             kNWarps * 16,
             alibi_slope_block
         );
+
+        if (cute::thread(0, 0)) { print("split_kv"); print(bidb); print_tensor(alibi_slope_block); }
 
         // mask.template apply_mask<Is_causal, Is_even_MN>(
         //     acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
