@@ -163,13 +163,6 @@ struct Mask {
                         const int col_idx = col_idx_base + j;
 
                         // auto mask_val = attn_mask.data()[col_idx];
-                        if (cute::thread0()) {
-                            printf(
-                                "Col only col_idx = %d, mask_val = %d\n",
-                                col_idx, attn_mask(make_coord(col_idx)),
-                                tensor(mi, make_coord(j, nj))
-                            );
-                        }
                         
                         #pragma unroll
                         for (int mi = 0; mi < size<0>(tensor); ++mi) {
@@ -183,6 +176,14 @@ struct Mask {
 
                             if (attn_mask(make_coord(col_idx)) == 0) {
                                 tensor(mi, make_coord(j, nj)) = -INFINITY;
+                            }
+
+                            if (cute::thread0()) {
+                                printf(
+                                    "Col only col_idx = %d, mask_val = %d\n",
+                                    col_idx, attn_mask(make_coord(col_idx)),
+                                    tensor(mi, make_coord(j, nj))
+                                );
                             }
                         }
                     }
