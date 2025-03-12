@@ -164,7 +164,7 @@ struct Mask {
 
                         // auto mask_val = attn_mask.data()[col_idx];
                         if (cute::thread0()) {
-                            printf("Col only col_idx = %d, mask_val = %", col_idx, attn_mask(make_coord(col_idx));
+                            printf("Col only col_idx = %d, mask_val = %", col_idx, attn_mask(make_coord(col_idx)));
                         }
                         
                         #pragma unroll
@@ -204,7 +204,7 @@ struct Mask {
                                 
                                 // const int mask_val = attn_mask.data()[col_idx];
                                 if (cute::thread0()) {
-                                    printf("Not col only: col_idx = %d, mask_val = %", col_idx, attn_mask(make_coord(col_idx));
+                                    printf("Not col only: col_idx = %d, mask_val = %", col_idx, attn_mask(make_coord(col_idx)));
                                 }
 
                                 if constexpr (Has_alibi) {
