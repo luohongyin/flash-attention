@@ -340,16 +340,16 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         }
 
         // 2) Slice the relevant block for the current thread
-        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
-            Shape<Int<kBlockN>>{},
-            make_coord((n_block - n_block_min) * kBlockN));
+        // Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+        //     Shape<Int<kBlockN>>{},
+        //     make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s,
             n_block * kBlockN,
             m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
             kNWarps * 16,
-            alibi_slope_block
+            alibi_slope_vec
         );
 
         // if (cute::thread(0, 0)) { print("loop 1 1row"); print(bidb); print_tensor(alibi_slope_block); }
@@ -438,16 +438,16 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         }
 
         // 2) Slice the relevant block for the current thread
-        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
-            Shape<Int<kBlockN>>{},
-            make_coord((n_block - n_block_min) * kBlockN));
+        // Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+        //     Shape<Int<kBlockN>>{},
+        //     make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask</*Causal_mask=*/false, /*Is_even_MN=*/true>(
             acc_s,
             n_block * kBlockN,
             m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
             kNWarps * 16,
-            alibi_slope_block
+            alibi_slope_vec
         );
 
         // #pragma unroll
@@ -976,16 +976,16 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         }
 
         // 2) Slice the relevant block for the current thread
-        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
-            Shape<Int<kBlockN>>{},
-            make_coord((n_block - n_block_min) * kBlockN));
+        // Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+        //     Shape<Int<kBlockN>>{},
+        //     make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s,
             n_block * kBlockN,
             m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
             kNWarps * 16,
-            alibi_slope_block
+            alibi_slope_vec
         );
 
         // if (cute::thread(0, 0)) { print("split_kv mask_step"); print(bidb); print_tensor(alibi_slope_block); }
@@ -1076,16 +1076,16 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         }
 
         // 2) Slice the relevant block for the current thread
-        Tensor alibi_slope_block = local_tile(alibi_slope_vec,
-            Shape<Int<kBlockN>>{},
-            make_coord((n_block - n_block_min) * kBlockN));
+        // Tensor alibi_slope_block = local_tile(alibi_slope_vec,
+        //     Shape<Int<kBlockN>>{},
+        //     make_coord((n_block - n_block_min) * kBlockN));
 
         mask.template apply_mask<Is_causal, Is_even_MN>(
             acc_s,
             n_block * kBlockN,
             m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4,
             kNWarps * 16,
-            alibi_slope_block
+            alibi_slope_vec
         );
 
         // if (cute::thread(0, 0)) { print("split_kv even step"); print(bidb); print_tensor(alibi_slope_block); }
