@@ -142,6 +142,11 @@ struct Mask {
         static_assert(decltype(size<0>(tensor_))::value == 4, "First dimension must be 4");
         static constexpr bool Need_masking = Has_alibi || Causal_mask || Is_local || !Is_even_MN;
         // if (cute::thread0()) { printf("Has_alibi = %d, Causal_mask=%d, Is_local=%d, Is_even_MN = %d, Need_masking = %d\n", Has_alibi, Causal_mask, Is_local, Is_even_MN, Need_masking); }
+        if (cute::thread0()) {
+            print_tensor(attn_mask);
+            printf("max_seqlen_k = %d", max_seqlen_k);
+            printf("\n=========\n");
+        }
         if constexpr (Need_masking) {
             // Reshape tensor_ from (MMA=4, MMA_M, MMA_N) to (nrow=(2, MMA_M), ncol=(2, MMA_N))
             Tensor tensor = make_tensor(tensor_.data(), FLASH_NAMESPACE::convert_layout_acc_rowcol(tensor_.layout()));
@@ -158,6 +163,9 @@ struct Mask {
                         const int col_idx = col_idx_base + j;
 
                         // auto mask_val = attn_mask.data()[col_idx];
+                        if (cute::thread0()) {
+                            printf("Col only col_idx = %d, mask_val = %", col_idx, attn_mask(make_coord(col_idx));
+                        }
                         
                         #pragma unroll
                         for (int mi = 0; mi < size<0>(tensor); ++mi) {
@@ -184,6 +192,9 @@ struct Mask {
                         const int row_idx = row_idx_base + i * 8;
                         const int col_idx_limit_left = std::max(0, row_idx + max_seqlen_k - max_seqlen_q - window_size_left);
                         const int col_idx_limit_right = std::min(max_seqlen_k, row_idx + 1 + max_seqlen_k - max_seqlen_q + window_size_right);
+                        if (cute::thread0()) {
+                            printf("Not col only: col_idx_limit_left = %d, col_idx_limit_right = %", col_idx_limit_left, col_idx_limit_right);
+                        }
                         #pragma unroll
                         for (int nj = 0; nj < size<1, 1>(tensor); ++nj) {
                             const int col_idx_base = col_idx_offset + nj * 8;
@@ -192,6 +203,9 @@ struct Mask {
                                 const int col_idx = col_idx_base + j;
                                 
                                 // const int mask_val = attn_mask.data()[col_idx];
+                                if (cute::thread0()) {
+                                    printf("Not col only: col_idx = %d, mask_val = %", col_idx, attn_mask(make_coord(col_idx));
+                                }
 
                                 if constexpr (Has_alibi) {
                                     if constexpr (Is_causal) {
