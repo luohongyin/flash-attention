@@ -676,6 +676,8 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         make_stride(_1{})
     );
 
+    if (cute::thread(0, 0)) { print("split_kv mask_step"); print(bidb); print_tensor(alibi_slope_vec); }
+
     typename Kernel_traits::GmemTiledCopyQKV gmem_tiled_copy_Q;
     auto gmem_thr_copy_Q = gmem_tiled_copy_Q.get_thread_slice(tidx);
     typename Kernel_traits::GmemTiledCopyQKVPaged gmem_tiled_copy_KV;
@@ -927,7 +929,7 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
     FLASH_NAMESPACE::Softmax<2 * size<1>(acc_o)> softmax;
 
     // const float alibi_slope = !Has_alibi ? 0.0f : reinterpret_cast<float *>(params.alibi_slopes_ptr)[bidb * params.alibi_slopes_batch_stride + bidh] / params.scale_softmax;
-    FLASH_NAMESPACE::Mask<Is_causal, Is_local, Has_alibi> mask(binfo.actual_seqlen_k, binfo.actual_seqlen_q, params.window_size_left, params.window_size_right, 0.0f);
+    FLASH_NAMESPACE::Mask<Is_causal, Is_local, false> mask(binfo.actual_seqlen_k, binfo.actual_seqlen_q, params.window_size_left, params.window_size_right, 0.0f);
 
     // For performance reason, we separate out two kinds of iterations:
     // those that need masking on S, and those that don't.
@@ -986,7 +988,7 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             alibi_slope_block
         );
 
-        if (cute::thread(0, 0)) { print("split_kv mask_step"); print(bidb); print_tensor(alibi_slope_block); }
+        // if (cute::thread(0, 0)) { print("split_kv mask_step"); print(bidb); print_tensor(alibi_slope_block); }
 
         // mask.template apply_mask<Is_causal, Is_even_MN>(
         //     acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
@@ -1086,7 +1088,7 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             alibi_slope_block
         );
 
-        if (cute::thread(0, 0)) { print("split_kv even step"); print(bidb); print_tensor(alibi_slope_block); }
+        // if (cute::thread(0, 0)) { print("split_kv even step"); print(bidb); print_tensor(alibi_slope_block); }
 
         // mask.template apply_mask</*Causal_mask=*/false>(
         //     acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
