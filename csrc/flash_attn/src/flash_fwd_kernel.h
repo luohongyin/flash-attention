@@ -986,7 +986,7 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             alibi_slope_block
         );
 
-        if (cute::thread(0, 0)) { print("split_kv"); print(bidb); print_tensor(alibi_slope_block); }
+        if (cute::thread(0, 0)) { print("split_kv mask_step"); print(bidb); print_tensor(alibi_slope_block); }
 
         // mask.template apply_mask<Is_causal, Is_even_MN>(
         //     acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
@@ -1085,6 +1085,8 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
             kNWarps * 16,
             alibi_slope_block
         );
+
+        if (cute::thread(0, 0)) { print("split_kv even step"); print(bidb); print_tensor(alibi_slope_block); }
 
         // mask.template apply_mask</*Causal_mask=*/false>(
         //     acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16
